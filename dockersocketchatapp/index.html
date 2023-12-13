@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        /* Styling for the html page  */
+        body {
+            margin: 0;
+            padding-bottom: 3rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #form {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            height: 3rem;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        #input {
+            border: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+            border-radius: 2rem;
+            margin: 0.25rem;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #form>button {
+            background: #333;
+            border: none;
+            padding: 0 1rem;
+            margin: 0.25rem;
+            border-radius: 3px;
+            outline: none;
+            color: #fff;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages>li {
+            padding: 0.5rem 1rem;
+        }
+
+        #messages>li:nth-child(odd) {
+            background: #efefef;
+        }
+
+        #online-users-box {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 1rem;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- create a html element to house the online users -->
+    <div id="onlineUsersBox">
+        <p>Online Users:</p>
+        <ul id="online-users"></ul>
+    </div>
+    <ul id="messages"></ul>
+    <!-- Create an html element for the typing message  -->
+    <p id="typing-message"></p>
+    <form id="form" action="">
+        <!-- Q2 - create an input for nickname -->
+        <input id="nickname" placeholder="Create nickname" autocomplete="off" />
+        <input id="input" autocomplete="off" />
+        <button>Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        var messages = document.getElementById('messages');
+        var form = document.getElementById('form');
+        var input = document.getElementById('input');
+        // Create variables for each thing 
+        var nicknameInput = document.getElementById('nickname');
+        var joinedChat = false;
+        var isTyping = false;
+        var typingMessage = document.getElementById('typing-message');
+        var onlineUsers = document.getElementById('online-users');
+
+        // create an event listener thats triggered when the input field changes 
+        input.addEventListener('input', function () {
+            // if the isTyping flag is false then:
+            if (!isTyping) {
+                // change the isTyping flag to true
+                isTyping = true;
+                // emit a typing event to the server 
+                socket.emit('typing', true);
+            }
+        });
+
+        // create an event listener thats triggered when the input field changes or loses focus 
+        input.addEventListener('change', function () {
+            // if the isTyping flag is true the:
+            if (isTyping) {
+                // change the isTyping flag to false 
+                isTyping = false;
+                // emit a typing event to the server with false 
+                socket.emit('typing', false);
+                // call the clearTypingMessage function 
+                clearTypingMessage();
+            }
+        });
+
+        // create a function to clear the user is typing message 
+        function clearTypingMessage() {
+            typingMessage.textContent = '';
+        }
+
+        // create an event listener tats triggered when the form is submitted
+        form.addEventListener('submit', function (e) {
+            e.preventDefault(); // prevent the page from reloading
+
+            // console.log("nickname", nicknameInput.value);
+            // console.log("message", input.value)
+
+            // if the nickname and input fields have values then:
+            if (nicknameInput.value && input.value) {
+                // if the user has not yet joined the chat
+                if (!joinedChat) {
+                    // send a set nickname event to the server 
+                    socket.emit('set nickname', nicknameInput.value);
+                    // change the joinedChat flag to true
+                    joinedChat = true;
+                }
+                // emit a chat event to the server with the input value
+                socket.emit('chat message', input.value);
+                // clear the input value
+                input.value = '';
+                // disable the nickname field
+                nicknameInput.disabled = true;
+                // set focus to the input field
+                input.focus();
+            } else if (input.value) {
+                // if just the inputy value has been entered, emit a chat event with the input value
+                socket.emit('chat message', input.value);
+                // Q3 - append the chat message to the UI
+                appendMessage(`${socket.nickname}: ${input.value}`)
+                // clear the typing message
+                clearTypingMessage();
+                // clear the input value
+                input.value = '';
+            }
+        });
+
+        // Q3 - register the chat message event
+        socket.on('chat message', function (msg) {
+            // checks if the sent message matches the current users nickname
+            if (!msg.startsWith(`${socket.nickname}: `)) {
+                // if the nickname doesnt match then append the message to the UI - to avoid message double ups 
+                appendMessage(msg);
+            }
+        });
+        // Q4 - register the typing event
+        socket.on('typing', function (data) {
+            // if the isTyping flag is true then display the message with the typing users nickname
+            typingMessage.textContent = data.isTyping ? `${data.nickname} is typing...` : '';
+        });
+
+        // Q5 - register the update online users event
+        socket.on('update online users', function (onlineUsers) {
+            // ensure the onlineUsers is dealt with as an array
+            if (Array.isArray(onlineUsers)) {
+                // call the updateOnlineUsersList function
+                updateOnlineUsersList(onlineUsers);
+            }
+        });
+
+        function appendMessage(msg) {
+            var item = document.createElement('li');
+            item.textContent = msg;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        // create the updateOnlineUsers function 
+        function updateOnlineUsersList(users) {
+            // delegate the onlineUsersList to its html element
+            var onlineUsersList = document.getElementById('online-users');
+            // reset the onlineUsersList
+            onlineUsersList.innerHTML = '';
+            // iterate over each element in the users array
+            users.forEach(function (user) {
+                // create a list item for each element
+                var listItem = document.createElement('li');
+                // set the text content to the users name
+                listItem.textContent = user;
+                // append the list item to the list
+                onlineUsersList.appendChild(listItem);
+            });
+        }
+
+    </script>
+
+
+</body>
+
+</html>

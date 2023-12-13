@@ -67,3 +67,12 @@ server.listen(3050, () => {
 
 // for question 2, i added secrets
 
+// below was in my terminal in the same folder as my SSH key pair
+// question 3 to run the application through EC2 instance:
+// sudo yum update > sudo yum install docker 
+// sudo systemctl start docker.service 
+// sudo docker pull lilybarrettpower/socketchatv2:latest
+// sudo systemctl stop httpd
+// sudo docker run -d -p 80:3050 lilybarrettpower/socketchatv2:latest
+// then the application is accessible through the public URL of my EC2 instance
+

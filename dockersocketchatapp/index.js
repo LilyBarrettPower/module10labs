@@ -62,3 +62,6 @@ server.listen(3050, () => {
 // push your repository to docker hub - docker push lilybarrettpower/dockersocketchat
 // you can then pull the dockerhub version - docker pull lilybarrettpower/dockersocketchat
 
+
+// for question 2, i added secrets
+

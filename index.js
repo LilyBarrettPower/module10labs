@@ -1,3 +1,4 @@
+require('dotenv').config(); // require dotenv for environment variables 
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -48,6 +49,7 @@ io.on('connection', (socket) => {
     });
 });
 
+var port = process.env.PORT || 3050 // using environment variables 
 
 server.listen(3050, () => {
     console.log('listening on *:3050');
